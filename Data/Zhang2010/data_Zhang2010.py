@@ -22,7 +22,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-
 colors=['#253494',
 '#2c7fb8',
 '#41b6c4']
@@ -87,12 +86,6 @@ for D in target_amplitude:
 
 	plt.errorbar(target_size, selection_time, yerr=selection_time_up,fmt=':', color='r')
 	plt.errorbar(target_size, p_time, yerr=p_time_up,fmt=':', color='r')
-	
-
-
-	
-
-
 
 	plt.xlabel(f'target size ({chr(176)})')
 	plt.ylabel('Time (ms)')
@@ -107,7 +100,7 @@ for D in target_amplitude:
 		ax.text(target_size[i]-0.1,800,f'{dwell_time[i]}',rotation=90,fontsize=18)
 
 plt.show()
-plt.savefig(f'data_zhang2010.png')
+plt.savefig(f'figures/Fig3a_zhang2010.png')
 
 
 
