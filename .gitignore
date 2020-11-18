@@ -1,2 +1,5 @@
 Papers/
 Model/logs
+Data/Zhang2010/figures/
+Model/tmp.py
+Model/envs/__pycache__/gaze.cpython-37.pyc

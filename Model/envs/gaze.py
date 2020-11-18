@@ -82,7 +82,7 @@ class Gaze(gym.Env):
         self.observation_space = spaces.Box(low=-1, high=1, shape=(2, ), dtype=np.float64)
         self.belief_space = spaces.Box(low=-1, high=1, shape=(2, ), dtype=np.float64)
 
-        self.max_fixation=1000
+        self.max_fixation=500
 
          
     def reset(self):
@@ -102,6 +102,7 @@ class Gaze(gym.Env):
         # the first obs
         self.belief,self.belief_uncertainty=self.obs, self.obs_uncertainty
 
+
         return self.belief
 
     def step(self, action):
@@ -109,12 +110,19 @@ class Gaze(gym.Env):
         move_dis=_calc_dis(self.fixate,action)
         ocular_noise=np.random.normal(0, self.ocular_std*move_dis, action.shape)
         self.fixate= action + ocular_noise
-        # the fixate should be rarely be outside the -1, and 1.
         self.fixate=np.clip(self.fixate,-1,1)
+
+        others={'n_fixation':self.n_fixation,
+                'target': self.state, 
+                'belief': self.belief,
+                'aim': action,
+                'fixate': self.fixate}
+
         self.n_fixation+=1
 
         # check if the eye is within the target region
         dis_to_target=_calc_dis(self.state, self.fixate)
+        
         if  dis_to_target < self.fitts_W/2:
             done = True
             reward = 0
@@ -128,16 +136,6 @@ class Gaze(gym.Env):
         if self.n_fixation>self.max_fixation:
             done=True
 
-        
-
-        others={'n_fixation':self.n_fixation,
-                'target': self.state, 
-                'belief': self.belief,
-                'aim': action,
-                'fixate': self.fixate,
-                'done':done}
-
-
         return self.belief, reward, done, others
 
 
@@ -147,6 +145,9 @@ class Gaze(gym.Env):
         spatial_noise=np.random.normal(0, self.swapping_std*eccentricity, self.state.shape)
         obs=self.state + spatial_noise
         # the obs should rarely be outside of -1 and 1, just in case
+        if obs[0]>1 or obs[0]<-1 or obs[1]>1 or obs[0]<-1:
+            print(obs)
+            print('obs is out of the range!!!!!')
         obs=np.clip(obs,-1,1)
         
         return obs,obs_uncertainty
