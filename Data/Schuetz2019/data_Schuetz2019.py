@@ -116,7 +116,25 @@ err2=(n-bo)/349
 h_data=plt.errorbar(size, num_fix, yerr=err1,fmt='o-', color='black',
              ecolor='black', elinewidth=1, capsize=2,label='Data (D=5 and D=10 pooled)')
 
+#plot model
+# ocu=0.05,swp=0.05
+#d5=np.array([1.37,1.1,1.0,1.0,1.0,1.0])
+#d5_std=np.array([0.48,0.29,0.09,0.03,0.04,0.0])
 
+#d10=np.array([1.80,1.50,1.25,1.06,1.0,1.0])
+#d10_std=np.array([0.40,0.40,0.43,0.24,0.1,0.0])
+
+# ocu=0.1,swp=0.1
+d5=np.array([1.81,1.5,1.21,1.05,1.0,1.0])
+d5_std=np.array([0.45,0.5,0.41,0.23,0.1,0.0])
+
+d10=np.array([2.1,1.89,1.69,1.45,1.26,1.13])
+d10_std=np.array([0.47,0.43,0.48 ,0.5,0.44,0.33])
+
+
+h_model5=plt.plot(size, d5,'ko:', color='r',label='model d5')
+
+h_model10=plt.plot(size, d10,'k>:', color='g',label='model d10')
 
 plt.xlabel('Target size ')
 plt.ylabel('Saccades per trial')
@@ -143,10 +161,12 @@ def ID(W,D):
 ids=[]
 for dd in np.array([5,10]):
 	for www in np.array([10,15,20,30,40,50]):
-		ids.append(ID(www/10,dd))
+		ids.append(np.round(ID(www/10,dd),2))
+		print(ids)
 
 ids=np.array(ids)
 ids=np.unique(ids)
+print(ids)
 
 unit1=330
 up=np.array([32,36,40,36,88,135,177,216,264])
@@ -155,6 +175,8 @@ mid=np.array([18,27,26,24,68,101,140,183,218])
 mid1=mid/unit1+1
 up1=(up-mid)/unit1
 
+print(mid1)
+xxx
 plt.errorbar(ids,mid1,yerr=up1,color='r',fmt='s-')
 
 

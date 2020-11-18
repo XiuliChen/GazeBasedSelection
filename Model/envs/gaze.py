@@ -145,9 +145,11 @@ class Gaze(gym.Env):
         spatial_noise=np.random.normal(0, self.swapping_std*eccentricity, self.state.shape)
         obs=self.state + spatial_noise
         # the obs should rarely be outside of -1 and 1, just in case
+        '''
         if obs[0]>1 or obs[0]<-1 or obs[1]>1 or obs[0]<-1:
             print(obs)
             print('obs is out of the range!!!!!')
+        '''
         obs=np.clip(obs,-1,1)
         
         return obs,obs_uncertainty

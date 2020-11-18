@@ -51,7 +51,7 @@ def plot_results2(log_folder, title='Learning Curve'):
     plt.plot(x, y)
     plt.xlabel('Number of Timesteps')
     plt.ylabel('Rewards')
-    plt.title(f'last average (window=100)= {np.round(y[-1],3)}')
+    #plt.title(f'last average (window=100)= {np.round(y[-1],3)}')
 
 
 ###########################################################################
@@ -63,10 +63,9 @@ def plot_results2(log_folder, title='Learning Curve'):
 # 25.78 degree is converted to 0.5 
 # and other distance and width is converted proportionally.
 
-w_zhang=np.array([1.73, 2.16, 2.65, 3.08])
-d_zhang=np.array([11.68,6.16])
 #d_zhang=np.array([25.78,11.68,6.16])
-#w_zhang=np.array([1.23, 1.73, 2.16, 2.65, 3.08])
+d_zhang=np.array([11.68,6.16])
+w_zhang=np.array([1.23, 1.73, 2.16, 2.65, 3.08])
 
 w_schuetz=np.array([1,1.5,2,3,4,5])
 d_schuetz=np.array([10,5])
@@ -80,8 +79,8 @@ w_schuetz=np.round(w_schuetz*unit,2)
 d_schuetz=np.round(d_schuetz*unit,2)
 
 ###########################################################################
-for paper in range(1):
-    if paper==1:
+for paper in ['schuetz','zhang']:
+    if paper=='schuetz':
         w=w_schuetz
         d=d_schuetz
     else:
@@ -91,52 +90,96 @@ for paper in range(1):
     for fitts_W in w:
         for fitts_D in d:
 
-            ocular_std=0.1
-            swapping_std=0.1
+            ocular_std=0.09
+            swapping_std=0.09
 
-            timesteps = 2e6
-            run=1
-            # Create log dir
-            log_dir = f'./logs/w{fitts_W}d{fitts_D}ocular{ocular_std}swapping{swapping_std}/run{run}/'
-            log_dir2 = f'./logs/w{fitts_W}d{fitts_D}ocular{ocular_std}swapping{swapping_std}/'
+            timesteps = 3e6
+            for run in range(1,2):
+                # Create log dir
+                log_dir = f'./logs3/w{fitts_W}d{fitts_D}ocular{ocular_std}swapping{swapping_std}/run{run}/'
+                log_dir2 = f'./logs3/w{fitts_W}d{fitts_D}ocular{ocular_std}swapping{swapping_std}/'
 
-            os.makedirs(log_dir, exist_ok=True)
+                os.makedirs(log_dir, exist_ok=True)
 
-            params=np.array((fitts_D,fitts_W,ocular_std,swapping_std))
-            np.savetxt( f'{log_dir}params.csv', params, delimiter=',') 
+                params=np.array((fitts_D,fitts_W,ocular_std,swapping_std))
+                np.savetxt( f'{log_dir}params.csv', params, delimiter=',') 
 
-            # Instantiate the env
-            env = Gaze(fitts_W = fitts_W, 
-                fitts_D=fitts_D, 
-                ocular_std=ocular_std, 
-                swapping_std=swapping_std)
+                # Instantiate the env
+                env = Gaze(fitts_W = fitts_W, 
+                    fitts_D=fitts_D, 
+                    ocular_std=ocular_std, 
+                    swapping_std=swapping_std)
 
-            env = Monitor(env, log_dir)
+                env = Monitor(env, log_dir)
 
-            # Custom MLP policy of two layers of size 32 each with tanh activation function
-            #policy_kwargs = dict(net_arch=[128, 128])
-            #policy_kwargs=policy_kwargs
-           
-            # Train the agent
+                # Custom MLP policy of two layers of size 32 each with tanh activation function
+                #policy_kwargs = dict(net_arch=[128, 128])
+                #policy_kwargs=policy_kwargs
+               
+                # Train the agent
+                
+                model = PPO('MlpPolicy', env, verbose=0, clip_range=0.15)
+
+
+                save_feq_n=timesteps/10
+
+                # Save a checkpoint every 1000 steps
+                checkpoint_callback = CheckpointCallback(save_freq=save_feq_n, save_path=f'{log_dir}savedmodel/',
+                                                         name_prefix='model_ppo')
+
+                # Train the agent
+
+                model.learn(total_timesteps=int(timesteps), callback=checkpoint_callback)
+
+                plot_results2(log_dir)
+
+
+                print('Done training!!!!')
+
+
+
+
+                ###########################################################################
+                # Record Behaviour of the trained policy
+                ###########################################################################
+                # save the step data
+
+              
+                print('Saving Data!!!!')
+                # Test the trained agent
+                n_eps=1000
+                number_of_saccades=np.ndarray(shape=(n_eps,1), dtype=np.float32)
+                movement_time_all=np.ndarray(shape=(n_eps,1), dtype=np.float32)
+                eps=0
+                while eps<n_eps:                
+                        done=False
+                        step=0
+                        obs= env.reset()
+                        fixate=np.array([0,0])
+                        movement_time=0
+                        while not done:
+                            step+=1
+                            action, _ = model.predict(obs,deterministic = True)
+                            obs, reward, done, info = env.step(action)
+                            move_dis=calc_dis(info['fixate'],fixate)
+                            fixate=info['fixate']
+                            movement_time+=37+2.7*move_dis
+                            if done:
+                                number_of_saccades[eps]=step
+                                movement_time_all[eps]=movement_time
+                                eps+=1
+                                break
+                
+
+                np.savetxt( f'{log_dir}num_saccades.csv', number_of_saccades, delimiter=',')
+                np.savetxt( f'{log_dir}movement_time.csv', movement_time_all, delimiter=',') 
+
+                plt.title(f'num_sccade={np.round(np.mean(number_of_saccades),2)},std_sccade={np.round(np.std(number_of_saccades),2)} \n MT={np.round(np.mean(movement_time_all),2)}, MT_std={np.round(np.mean(movement_time_all),2)}')
+
+                plt.savefig(f'{log_dir2}learning_curve{run}.png')
+                plt.close('all') 
             
-            model = PPO('MlpPolicy', env, verbose=0, clip_range=0.15)
 
-
-            save_feq_n=timesteps/10
-
-            # Save a checkpoint every 1000 steps
-            checkpoint_callback = CheckpointCallback(save_freq=save_feq_n, save_path=f'{log_dir}savedmodel/',
-                                                     name_prefix='model_ppo')
-
-            # Train the agent
-
-            model.learn(total_timesteps=int(timesteps), callback=checkpoint_callback)
-
-            plot_results2(log_dir)
-            plt.savefig(f'{log_dir2}learning_curve{run}.png')
-            plt.close('all') 
-
-            print('Done training!!!!')
 
 
             ###########################################################################
