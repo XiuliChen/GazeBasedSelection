@@ -9,7 +9,6 @@ import matplotlib.pyplot as plt
 from stable_baselines3 import PPO
 from stable_baselines3.common import results_plotter
 from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.results_plotter import load_results, ts2xy, plot_results
 from stable_baselines3.common.noise import NormalActionNoise
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.callbacks import CheckpointCallback
@@ -17,41 +16,12 @@ from stable_baselines3.common.callbacks import CheckpointCallback
 
 
 from envs.gaze import Gaze
-from envs.utils import calc_dis
+from envs.utils import calc_dis, moving_average,plot_results2
 from numpy import genfromtxt
 
 import glob
 from PIL import Image
 
-def moving_average(values, window):
-    """
-    Smooth values by doing a moving average
-    :param values: (numpy array)
-    :param window: (int)
-    
-    :return: (numpy array)
-    """
-    weights = np.repeat(1.0, window) / window
-    return np.convolve(values, weights, 'valid')
-
-
-def plot_results2(log_folder, title='Learning Curve'):
-    """
-    plot the results
-
-    :param log_folder: (str) the save location of the results to plot
-    :param title: (str) the title of the task to plot
-    """
-    x, y = ts2xy(load_results(log_folder), 'timesteps')
-    y = moving_average(y, window=100)
-    # Truncate x
-    x = x[len(x) - len(y):]
-
-    fig = plt.figure(title)
-    plt.plot(x, y)
-    plt.xlabel('Number of Timesteps')
-    plt.ylabel('Rewards')
-    #plt.title(f'last average (window=100)= {np.round(y[-1],3)}')
 
 
 ###########################################################################
@@ -68,7 +38,7 @@ d_zhang=np.array([11.68,6.16])
 w_zhang=np.array([1.23, 1.73, 2.16, 2.65, 3.08])
 
 w_schuetz=np.array([1,1.5,2,3,4,5])
-d_schuetz=np.array([10,5])
+d_schuetz=np.array([5])
 
 unit=0.5/11.68
 
@@ -78,8 +48,12 @@ d_zhang=np.round(d_zhang*unit,2)
 w_schuetz=np.round(w_schuetz*unit,2)
 d_schuetz=np.round(d_schuetz*unit,2)
 
+ocular_std=0.08
+swapping_std=0.09
+timesteps = 2e6
+
 ###########################################################################
-for paper in ['schuetz','zhang']:
+for paper in ['zhang']:
     if paper=='schuetz':
         w=w_schuetz
         d=d_schuetz
@@ -90,18 +64,16 @@ for paper in ['schuetz','zhang']:
     for fitts_W in w:
         for fitts_D in d:
 
-            ocular_std=0.09
-            swapping_std=0.09
 
-            timesteps = 3e6
-            for run in range(1,2):
+            
+            for run in [1]:
                 # Create log dir
-                log_dir = f'./logs3/w{fitts_W}d{fitts_D}ocular{ocular_std}swapping{swapping_std}/run{run}/'
-                log_dir2 = f'./logs3/w{fitts_W}d{fitts_D}ocular{ocular_std}swapping{swapping_std}/'
+                log_dir = f'./logs4/w{fitts_W}d{fitts_D}ocular{ocular_std}swapping{swapping_std}/run{run}/'
+                log_dir2 = f'./logs4/w{fitts_W}d{fitts_D}ocular{ocular_std}swapping{swapping_std}/'
 
                 os.makedirs(log_dir, exist_ok=True)
 
-                params=np.array((fitts_D,fitts_W,ocular_std,swapping_std))
+                params=np.array((fitts_D,fitts_W,ocular_std,swapping_std,timesteps))
                 np.savetxt( f'{log_dir}params.csv', params, delimiter=',') 
 
                 # Instantiate the env
@@ -130,6 +102,7 @@ for paper in ['schuetz','zhang']:
                 # Train the agent
 
                 model.learn(total_timesteps=int(timesteps), callback=checkpoint_callback)
+                model.save(f'{log_dir}savedmodel/model_ppo')
 
                 plot_results2(log_dir)
 

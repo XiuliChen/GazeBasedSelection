@@ -4,4 +4,12 @@ Model/logs
 Data/Zhang2010/figures/
 Model/tmp.py
 Model/envs/__pycache__/gaze.cpython-37.pyc
+Model/envs/__pycache__/gaze.cpython-36.pyc
+Model/envs/__pycache__/utils.cpython-36.pyc
 Model/saved_models/
+Model/figures/
+Model/logs1/
+Model/logs_pro/
+Model/main_pro.py
+Model/SensitivityTest/
+others/
