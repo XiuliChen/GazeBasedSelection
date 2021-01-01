@@ -1,0 +1,2 @@
+gaze.py: the reward function -1 for each step, 0 if the gaze in the target region
+gaze_time_cost.py: the reward function is -(travel distance) on each step, 0 if the gaze in the target region. That is (this model learn to undershoot at the first saccade).

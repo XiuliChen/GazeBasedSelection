@@ -1,20 +1,13 @@
 
 # By Xiuli Chen 04/Sep/2020
-# chsh -s /bin/bash
-
-
 import numpy as np
 import gym
 from gym import spaces
 import math
 import matplotlib.pyplot as plt
 import itertools
-
 from envs.utils import calc_dis, get_new_target
 
-
-
-###########################################################################
 
 
 class Gaze(gym.Env):
@@ -70,7 +63,7 @@ class Gaze(gym.Env):
         self.observation_space = spaces.Box(low=-1, high=1, shape=(2, ), dtype=np.float64)
         self.belief_space = spaces.Box(low=-1, high=1, shape=(2, ), dtype=np.float64)
 
-        self.max_fixation=500
+        self.max_fixation=1000
 
          
     def reset(self):
@@ -81,7 +74,9 @@ class Gaze(gym.Env):
         # fixation at the starting point, the agent start with the
         # first fixation at the center
         self.fixate=np.array([0,0])
-        self.n_fixation=1
+        self.current=np.array([0,0])
+        self.aim=np.array([0,0])
+        self.n_step=0
 
         # the first obs
         self.obs,self.obs_uncertainty=self._get_obs()
@@ -96,17 +91,23 @@ class Gaze(gym.Env):
     def step(self, action):
         # execute the chosen action given the ocular motor noise
         move_dis=calc_dis(self.fixate,action)
+        self.aim=action
         ocular_noise=np.random.normal(0, self.ocular_std*move_dis, action.shape)
+
         self.fixate= action + ocular_noise
         self.fixate=np.clip(self.fixate,-1,1)
+        actual_move_dis=calc_dis(self.current,self.fixate)
 
-        others={'n_fixation':self.n_fixation,
+        self.curent=action + ocular_noise
+        self.curent=np.clip(self.curent,-1,1)
+
+        others={'n_fixation':self.n_step,
                 'target': self.state, 
                 'belief': self.belief,
                 'aim': action,
                 'fixate': self.fixate}
 
-        self.n_fixation+=1
+        self.n_step+=1
 
         # check if the eye is within the target region
         dis_to_target=calc_dis(self.state, self.fixate)
@@ -116,12 +117,12 @@ class Gaze(gym.Env):
             reward = 0
         else:
             done = False
-            reward = -1 
+            reward = -actual_move_dis 
             # has not reached the target, get new obs at the new fixation location
             self.obs,self.obs_uncertainty=self._get_obs()
             self.belief,self.belief_uncertainty=self._get_belief()
 
-        if self.n_fixation>self.max_fixation:
+        if self.n_step>self.max_fixation:
             done=True
 
         return self.belief, reward, done, others
@@ -133,11 +134,6 @@ class Gaze(gym.Env):
         spatial_noise=np.random.normal(0, self.swapping_std*eccentricity, self.state.shape)
         obs=self.state + spatial_noise
         # the obs should rarely be outside of -1 and 1, just in case
-        '''
-        if obs[0]>1 or obs[0]<-1 or obs[1]>1 or obs[0]<-1:
-            print(obs)
-            print('obs is out of the range!!!!!')
-        '''
         obs=np.clip(obs,-1,1)
         
         return obs,obs_uncertainty
@@ -153,6 +149,20 @@ class Gaze(gym.Env):
         belief_uncertainty=np.sqrt( (sigma1**2 * sigma2**2)/(sigma1**2 + sigma2**2))
 
         return belief, belief_uncertainty
+
+    def _save_data(self):
+        info={'eps':0,
+        'step':self.n_step,
+        'target_pos_x':self.state[0],
+        'target_pos_y':self.state[1],
+        'belief_x':self.belief[0],
+        'belief_y':self.belief[1],
+        'aim_x':self.aim[0],
+        'aim_y':self.aim[1],
+        'fixate_x':self.fixate[0],
+        'fixate_y':self.fixate[1],
+        }
+        return info
 
     
 
